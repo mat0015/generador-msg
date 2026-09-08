@@ -148,7 +148,7 @@ def generate_msg():
 
 def test():
 
-    return {'message': 'Backend funcionando correctamente'}
+    return {'message': 'Backend funcionando correctamentete'}
 
  
 
