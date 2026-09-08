@@ -10,6 +10,8 @@ from email.mime.multipart import MIMEMultipart
 
 from email.mime.text import MIMEText
 
+from email import encoders
+
  
 
 app = Flask(__name__)
@@ -50,7 +52,7 @@ def generate_msg():
 
        
 
-        # Crear mensaje MIME completo
+        # Crear mensaje MIME sin usar base64
 
         msg = MIMEMultipart('alternative')
 
@@ -64,27 +66,37 @@ def generate_msg():
 
         msg['X-Priority'] = '3'
 
+        msg['Content-Transfer-Encoding'] = '8bit'
+
        
 
-        # Parte de texto plano
+        # Parte de texto plano - SIN charset para evitar base64
 
-        text_part = MIMEText('Ver versión HTML de este mensaje.', 'plain', 'utf-8')
+        text_part = MIMEText('Ver versión HTML de este mensaje.', 'plain')
+
+        text_part['Content-Transfer-Encoding'] = '8bit'
 
         msg.attach(text_part)
 
        
 
-        # Parte HTML - importante establecer charset
+        # Parte HTML - SIN base64
 
-        html_part = MIMEText(html_body, 'html', 'utf-8')
+        html_part = MIMEText(html_body, 'html')
+
+        html_part['Content-Transfer-Encoding'] = '8bit'
+
+        html_part.replace_header('Content-Type', 'text/html; charset="utf-8"')
 
         msg.attach(html_part)
 
        
 
-        # Obtener contenido como bytes
+        # Obtener contenido como string (no bytes) para evitar encoding
 
-        msg_bytes = msg.as_bytes()
+        msg_str = msg.as_string()
+
+        msg_bytes = msg_str.encode('utf-8')
 
        
 
@@ -110,31 +122,17 @@ def generate_msg():
 
        
 
-        # Retornar con headers correctos para que Outlook lo maneje como .MSG
+        # Retornar con headers que obliguen a descargar
 
         return send_file(
 
             file_obj,
 
-            mimetype='application/vnd.ms-outlook',
+            mimetype='application/octet-stream',
 
             as_attachment=True,
 
-            download_name=f'{safe_filename}.msg',
-
-            headers={
-
-                'Content-Disposition': f'attachment; filename="{safe_filename}.msg"',
-
-                'Content-Type': 'application/vnd.ms-outlook',
-
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-
-                'Pragma': 'no-cache',
-
-                'Expires': '0'
-
-            }
+            download_name=f'{safe_filename}.msg'
 
         )
 
@@ -143,6 +141,10 @@ def generate_msg():
     except Exception as e:
 
         print(f"Error: {str(e)}")
+
+        import traceback
+
+        traceback.print_exc()
 
         return jsonify({'error': str(e)}), 500
 
