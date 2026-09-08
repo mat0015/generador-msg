@@ -6,11 +6,7 @@ import io
 
 import os
 
-from email.mime.multipart import MIMEMultipart
-
-from email.mime.text import MIMEText
-
-from email import encoders
+import uuid
 
  
 
@@ -52,49 +48,75 @@ def generate_msg():
 
        
 
-        # Crear mensaje MIME sin usar base64
+        # Generar MIME manualmente SIN base64
 
-        msg = MIMEMultipart('alternative')
-
-        msg['Subject'] = asunto
-
-        msg['From'] = 'noreply@generador.com'
-
-        msg['To'] = email_cliente
-
-        msg['X-Mailer'] = 'Generador de Mensajes'
-
-        msg['X-Priority'] = '3'
-
-        msg['Content-Transfer-Encoding'] = '8bit'
+        boundary = f"==============={uuid.uuid4().hex}=="
 
        
 
-        # Parte de texto plano - SIN charset para evitar base64
+        # Construir el MIME message manualmente
 
-        text_part = MIMEText('Ver versión HTML de este mensaje.', 'plain')
+        msg_lines = []
 
-        text_part['Content-Transfer-Encoding'] = '8bit'
+        msg_lines.append(f"From: noreply@generador.com")
 
-        msg.attach(text_part)
+        msg_lines.append(f"To: {email_cliente}")
+
+        msg_lines.append(f"Subject: {asunto}")
+
+        msg_lines.append(f"MIME-Version: 1.0")
+
+        msg_lines.append(f"X-Mailer: Generador de Mensajes")
+
+        msg_lines.append(f"X-Priority: 3")
+
+        msg_lines.append(f"Content-Type: multipart/alternative; boundary=\"{boundary}\"")
+
+        msg_lines.append("")
 
        
 
-        # Parte HTML - SIN base64
+        # Parte de texto plano
 
-        html_part = MIMEText(html_body, 'html')
+        msg_lines.append(f"--{boundary}")
 
-        html_part['Content-Transfer-Encoding'] = '8bit'
+        msg_lines.append("Content-Type: text/plain; charset=\"utf-8\"")
 
-        html_part.replace_header('Content-Type', 'text/html; charset="utf-8"')
+        msg_lines.append("Content-Transfer-Encoding: 8bit")
 
-        msg.attach(html_part)
+        msg_lines.append("")
+
+        msg_lines.append("Ver versión HTML de este mensaje.")
+
+        msg_lines.append("")
 
        
 
-        # Obtener contenido como string (no bytes) para evitar encoding
+        # Parte HTML
 
-        msg_str = msg.as_string()
+        msg_lines.append(f"--{boundary}")
+
+        msg_lines.append("Content-Type: text/html; charset=\"utf-8\"")
+
+        msg_lines.append("Content-Transfer-Encoding: 8bit")
+
+        msg_lines.append("")
+
+        msg_lines.append(html_body)
+
+        msg_lines.append("")
+
+       
+
+        # Cierre
+
+        msg_lines.append(f"--{boundary}--")
+
+       
+
+        # Unir con CRLF (formato correcto para email)
+
+        msg_str = "\r\n".join(msg_lines)
 
         msg_bytes = msg_str.encode('utf-8')
 
@@ -122,13 +144,13 @@ def generate_msg():
 
        
 
-        # Retornar con headers que obliguen a descargar
+        # Retornar como .msg
 
         return send_file(
 
             file_obj,
 
-            mimetype='application/octet-stream',
+            mimetype='application/vnd.ms-outlook',
 
             as_attachment=True,
 
