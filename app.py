@@ -1,8 +1,6 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, Response
 
 from flask_cors import CORS
-
-import io
 
 import os
 
@@ -20,7 +18,7 @@ CORS(app)
 
 def health():
 
-    return jsonify({'status': 'ok', 'message': 'Servidor funcionando correctamente'})
+    return {'status': 'ok', 'message': 'Servidor funcionando correctamente'}
 
  
 
@@ -44,17 +42,17 @@ def generate_msg():
 
         if not asunto or not email_cliente:
 
-            return jsonify({'error': 'Faltan datos requeridos'}), 400
+            return {'error': 'Faltan datos requeridos'}, 400
 
        
 
-        # Generar MIME manualmente SIN base64
+        # Generar MIME manualmente SIN encoding adicional
 
         boundary = f"==============={uuid.uuid4().hex}=="
 
        
 
-        # Construir el MIME message manualmente
+        # Construir el MIME message
 
         msg_lines = []
 
@@ -82,7 +80,7 @@ def generate_msg():
 
         msg_lines.append("Content-Type: text/plain; charset=\"utf-8\"")
 
-        msg_lines.append("Content-Transfer-Encoding: 8bit")
+        msg_lines.append("Content-Transfer-Encoding: 7bit")
 
         msg_lines.append("")
 
@@ -98,7 +96,7 @@ def generate_msg():
 
         msg_lines.append("Content-Type: text/html; charset=\"utf-8\"")
 
-        msg_lines.append("Content-Transfer-Encoding: 8bit")
+        msg_lines.append("Content-Transfer-Encoding: 7bit")
 
         msg_lines.append("")
 
@@ -114,7 +112,7 @@ def generate_msg():
 
        
 
-        # Unir con CRLF (formato correcto para email)
+        # Unir con CRLF
 
         msg_str = "\r\n".join(msg_lines)
 
@@ -138,25 +136,19 @@ def generate_msg():
 
        
 
-        # Crear archivo en memoria
+        # Retornar respuesta HTTP cruda sin procesamiento de Flask
 
-        file_obj = io.BytesIO(msg_bytes)
+        response = Response(msg_bytes, mimetype='application/vnd.ms-outlook')
+
+        response.headers['Content-Disposition'] = f'attachment; filename="{safe_filename}.msg"'
+
+        response.headers['Content-Length'] = len(msg_bytes)
+
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
 
        
 
-        # Retornar como .msg
-
-        return send_file(
-
-            file_obj,
-
-            mimetype='application/vnd.ms-outlook',
-
-            as_attachment=True,
-
-            download_name=f'{safe_filename}.msg'
-
-        )
+        return response
 
        
 
@@ -168,7 +160,7 @@ def generate_msg():
 
         traceback.print_exc()
 
-        return jsonify({'error': str(e)}), 500
+        return {'error': str(e)}, 500
 
  
 
@@ -176,7 +168,7 @@ def generate_msg():
 
 def test():
 
-    return jsonify({'message': 'Backend funcionando correctamente'})
+    return {'message': 'Backend funcionando correctamente'}
 
  
 
