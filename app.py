@@ -18,7 +18,7 @@ CORS(app)
 
 def health():
 
-    return {'status': 'ok', 'message': 'Servidor funcionando correctamente'}
+    return {'status': 'ok', 'message': 'Servidor funcionando correctamentete'}
 
  
 
@@ -46,13 +46,11 @@ def generate_msg():
 
        
 
-        # Generar MIME manualmente SIN encoding adicional
+        # Generar MIME sin headers de encoding
 
         boundary = f"==============={uuid.uuid4().hex}=="
 
        
-
-        # Construir el MIME message
 
         msg_lines = []
 
@@ -66,21 +64,17 @@ def generate_msg():
 
         msg_lines.append(f"X-Mailer: Generador de Mensajes")
 
-        msg_lines.append(f"X-Priority: 3")
-
         msg_lines.append(f"Content-Type: multipart/alternative; boundary=\"{boundary}\"")
 
         msg_lines.append("")
 
        
 
-        # Parte de texto plano
+        # Parte texto - SIN Content-Transfer-Encoding
 
         msg_lines.append(f"--{boundary}")
 
         msg_lines.append("Content-Type: text/plain; charset=\"utf-8\"")
-
-        msg_lines.append("Content-Transfer-Encoding: 7bit")
 
         msg_lines.append("")
 
@@ -90,13 +84,11 @@ def generate_msg():
 
        
 
-        # Parte HTML
+        # Parte HTML - SIN Content-Transfer-Encoding
 
         msg_lines.append(f"--{boundary}")
 
         msg_lines.append("Content-Type: text/html; charset=\"utf-8\"")
-
-        msg_lines.append("Content-Transfer-Encoding: 7bit")
 
         msg_lines.append("")
 
@@ -106,21 +98,15 @@ def generate_msg():
 
        
 
-        # Cierre
-
         msg_lines.append(f"--{boundary}--")
 
        
-
-        # Unir con CRLF
 
         msg_str = "\r\n".join(msg_lines)
 
         msg_bytes = msg_str.encode('utf-8')
 
        
-
-        # Generar nombre seguro
 
         safe_filename = asunto.replace('/', '_').replace('\\', '_').replace(':', '_')[:80]
 
@@ -136,15 +122,13 @@ def generate_msg():
 
        
 
-        # Retornar respuesta HTTP cruda sin procesamiento de Flask
+        # Respuesta cruda
 
-        response = Response(msg_bytes, mimetype='application/vnd.ms-outlook')
+        response = Response(msg_bytes)
+
+        response.headers['Content-Type'] = 'application/octet-stream'
 
         response.headers['Content-Disposition'] = f'attachment; filename="{safe_filename}.msg"'
-
-        response.headers['Content-Length'] = len(msg_bytes)
-
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
 
        
 
@@ -155,10 +139,6 @@ def generate_msg():
     except Exception as e:
 
         print(f"Error: {str(e)}")
-
-        import traceback
-
-        traceback.print_exc()
 
         return {'error': str(e)}, 500
 
